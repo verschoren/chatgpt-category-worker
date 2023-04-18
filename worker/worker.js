@@ -1,9 +1,16 @@
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
-    var ticket_id = path.split('/')[1]
+    var ticket_id = path.split('/')[1];
+
+    if (ticket_id < 1){
+      //check for a bad ticket ID
+      return new Response('Invalid Path', { status: 404 })
+    }
+
     var categories = await getCustomField(env,env.CATEGORY);
     var sentiments = await getCustomField(env,env.SENTIMENT);
+
     var conversation = await getTicketDescription(env,ticket_id);
     var category_prompt = categoryPrompt(categories,conversation);
     var sentiment_prompt = sentimentPrompt(sentiments,conversation);
@@ -11,8 +18,12 @@ export default {
     var category = await openAIRequest(env,category_prompt);
     var sentiment = await openAIRequest(env,sentiment_prompt);
     
-    await updateTicket(env,category,sentiment,ticket_id);
-    return new Response(category+' '+sentiment)
+    if (category && sentiment){
+      await updateTicket(env,category,sentiment,ticket_id);
+      return new Response("Ticket updated: " + category+' '+sentiment)
+    } else {
+      return new Response('Nothing could be mapped');
+    }
   }
 }
 
@@ -59,7 +70,6 @@ async function updateTicket(env,category,sentiment,ticket_id){
     };
   const response = await fetch(url,init);
   const results = await response.json();
-    console.log(results);
   return results;
 
 }
@@ -76,8 +86,7 @@ async function getCustomField(env,field_id){
     };
   const response = await fetch(url,init);
   const results = await response.json();
-    return results.ticket_field.custom_field_options;
-
+  return results.ticket_field.custom_field_options;
 }
 
 async function getTicketDescription(env,ticket_id){
@@ -90,7 +99,6 @@ async function getTicketDescription(env,ticket_id){
     };
   const response = await fetch(url,init);
   const results = await response.json();
-  console.log(results);
   return results.ticket.description;
 }
 
@@ -122,6 +130,5 @@ async function openAIRequest(env,prompt){
     };
   const response = await fetch(url, init);
   const results = await response.json();
-  console.log(results.choices[0].text.trim());
   return results.choices[0].text.trim();
 }
