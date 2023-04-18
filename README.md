@@ -8,6 +8,9 @@ A Cloudflare Worker that updates a Zendesk Ticket Category and Sentiment Tag
 - SENTIMENT	{zendesk sentiment custom field id}
 - TOKEN	 {base 64 encode: email:token/zendesk_token} //encrypted
 
+## URL
+https://chatgpt-category.verschoren.workers.dev/{ticket_id}
+
 ## Example Categories
 ```csv
 value,tag,default
