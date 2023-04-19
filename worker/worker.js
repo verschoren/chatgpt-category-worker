@@ -102,15 +102,6 @@ async function getTicketDescription(env,ticket_id){
   return results.ticket.description;
 }
 
-async function gatherResponse(response) {
-  const { headers } = response;
-  const contentType = headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    return JSON.stringify(await response.json());
-  }
-  return response.text();
-}
-
 async function openAIRequest(env,prompt){
   const request = {
     model: "text-davinci-003",
