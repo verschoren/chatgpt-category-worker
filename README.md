@@ -9,7 +9,7 @@ A Cloudflare Worker that updates a Zendesk Ticket Category and Sentiment Tag
 - TOKEN	 {base 64 encode: email:token/zendesk_token} //encrypted
 
 ## URL
-https://chatgpt-category.verschoren.workers.dev/{{ticket_id}}
+Create a Zendesk webhook thatdoes a get to: https://your.workers.url/{{ticket_id}}
 
 ## Example Categories
 ```csv
