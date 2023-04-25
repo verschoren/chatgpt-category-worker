@@ -10,42 +10,37 @@ export default {
 
     var categories = await getCustomField(env,env.CATEGORY);
     var sentiments = await getCustomField(env,env.SENTIMENT);
-
     var conversation = await getTicketDescription(env,ticket_id);
-    var category_prompt = categoryPrompt(categories,conversation);
-    var sentiment_prompt = sentimentPrompt(sentiments,conversation);
+    // console.log("CONVERSATION",conversation);
+
+    var category_prompt = getPrompt(categories,conversation);
+    var sentiment_prompt = getPrompt(sentiments,conversation);
     
     var category = await openAIRequest(env,category_prompt);
+    if (!category){
+      category = await openAIRequest(env,category_prompt);
+    }
     var sentiment = await openAIRequest(env,sentiment_prompt);
-    
-    if (category && sentiment){
+    if (!sentiment){
+      sentiment = await openAIRequest(env,sentiment_prompt);
+    }
+
+    if (category || sentiment){
       await updateTicket(env,category,sentiment,ticket_id);
       return new Response("Ticket updated: " + category+' '+sentiment)
     } else {
-      return new Response('Nothing could be mapped');
+      return new Response('Nothing could be mapped', {"status":500});
     }
   }
 }
 
-function categoryPrompt(categories,conversation){
+function getPrompt(categories,conversation){
   return `
-    Map the conversation below to this JSON list of categories and return only the value (but not the name or raw_name) of the best matching category.
+  Check this JSON object of categories:
+      ${JSON.stringify(categories)}
 
-    ${conversation}
-
-    Categories:
-    ${JSON.stringify(categories)}
-  `
-}
-
-function sentimentPrompt(sentiments,conversation){
-  return `
-    Map the conversation below to this JSON list of sentiments and return only the value (but not the name or raw_name) of the best matching sentiment.
-
-    ${conversation}
-
-    Categories:
-    ${JSON.stringify(sentiments)}
+  Now read this description: ${conversation}
+  Return only a valid JSON element from the array of categories that best matches this conversation.
   `
 }
 
@@ -89,8 +84,8 @@ async function getCustomField(env,field_id){
   var options = results.ticket_field.custom_field_options;
   var cleaned_options = options.map(({raw_name, ['default']: _, ...rest}) => rest);
   cleaned_options = cleaned_options.map(({['id']: _, ...rest}) => rest);
-  console.log(cleaned_options)
-  return cleaned_options;}
+  return cleaned_options;
+}
 
 async function getTicketDescription(env,ticket_id){
   const url = `https://${env.DOMAIN}.zendesk.com/api/v2/tickets/${ticket_id}.json`;
@@ -110,7 +105,7 @@ async function getTicketDescription(env,ticket_id){
 
   //The limit is 4097 tokens for the API with ~4 characters per token. 
   //So let's trim the description to 15k characters to be safe.
-  const trimmed = cleaned.substr(0, 15000);
+  const trimmed = cleaned.substr(0, 10000);
 
   return trimmed;
 }
@@ -134,5 +129,19 @@ async function openAIRequest(env,prompt){
     };
   const response = await fetch(url, init);
   const results = await response.json();
-  return results.choices[0].text.trim();
+  console.log("openAI",results)
+  var text = results.choices[0].text.trim();
+  text = text.replace("\n  Answer: ","");
+  text = text.replace("Answer: ","");
+  text = text.replace("\n  ","");
+  text = text.replace("value:","\"value\":")
+  text = text.replace("name:","\"name\":")
+  console.log(text);
+   try {
+    const parsedJSON = JSON.parse(text);
+    return parsedJSON.value;
+  } catch (error) {
+    console.error('Error parsing JSON:', error);
+    return null;
+  }
 }
