@@ -99,7 +99,17 @@ async function getTicketDescription(env,ticket_id){
     };
   const response = await fetch(url,init);
   const results = await response.json();
-  return results.ticket.description;
+  var description = results.ticket.description;
+  
+  //Remove HTML Code to trim description
+  const regex = /<[^>]*>/g;
+  const cleaned = description.replace(regex, " ");
+
+  //The limit is 4097 tokens for the API with ~4 characters per token. 
+  //So let's trim the description to 15k characters to be safe.
+  const trimmed = cleaned.substr(0, 15000);
+
+  return trimmed;
 }
 
 async function openAIRequest(env,prompt){
