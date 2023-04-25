@@ -86,8 +86,11 @@ async function getCustomField(env,field_id){
     };
   const response = await fetch(url,init);
   const results = await response.json();
-  return results.ticket_field.custom_field_options;
-}
+  var options = results.ticket_field.custom_field_options;
+  var cleaned_options = options.map(({raw_name, ['default']: _, ...rest}) => rest);
+  cleaned_options = cleaned_options.map(({['id']: _, ...rest}) => rest);
+  console.log(cleaned_options)
+  return cleaned_options;}
 
 async function getTicketDescription(env,ticket_id){
   const url = `https://${env.DOMAIN}.zendesk.com/api/v2/tickets/${ticket_id}.json`;
